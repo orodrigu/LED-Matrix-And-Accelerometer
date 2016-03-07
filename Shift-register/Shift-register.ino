@@ -44,17 +44,33 @@ void setup(){
   // Serial.begin(9600);
 }
 
+int shape[8][8] = {
+  {0,0,0,0,0,0,0,1},
+  {0,0,0,0,0,0,1,0},
+  {0,0,0,0,0,1,0,0},
+  {0,0,0,0,1,0,0,0},
+  {0,0,0,1,0,0,0,0},
+  {0,0,1,0,0,0,0,0},
+  {0,1,0,0,0,0,0,0},
+  {1,0,0,0,0,0,0,0}
+};
+
 void loop(){
   for (int r = 1; r <= 8; r++) {
     for (int c = 1; c <= 8; c++) {
-      // for rth row and cth column
-      single_dot_on(r, c);
-      write_registers();
-      delay(250);
-      single_dot_off(r, c);
-      write_registers();
-      delay(250);
+      // Serial.print(shape[r][c]);
+      if (shape[r-1][c-1] == 1){
+        single_dot_on(r, c);
+        write_registers();
+        // delay(250);      
+        single_dot_off(r, c);
+        write_registers();
+      }
+      else{
+        // delay(250);
+      }
     }
+    // Serial.print("\n");
   }
 }             
 
@@ -143,4 +159,18 @@ void whole_row(int n){
 // light up entire nth col
 void whole_col(int n){
 
+}
+
+void debug(){
+  for (int r = 1; r <= 8; r++) {
+    for (int c = 1; c <= 8; c++) {
+      // for rth row and cth column
+      single_dot_on(r, c);
+      write_registers();
+      delay(100);
+      single_dot_off(r, c);
+      write_registers();
+      delay(100);
+    }
+  }
 }
