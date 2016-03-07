@@ -44,7 +44,7 @@ void setup(){
   // Serial.begin(9600);
 }
 
-int shape[8][8] = {
+int DIAG[][8] = {
   {0,0,0,0,0,0,0,1},
   {0,0,0,0,0,0,1,0},
   {0,0,0,0,0,1,0,0},
@@ -56,22 +56,8 @@ int shape[8][8] = {
 };
 
 void loop(){
-  for (int r = 1; r <= 8; r++) {
-    for (int c = 1; c <= 8; c++) {
-      // Serial.print(shape[r][c]);
-      if (shape[r-1][c-1] == 1){
-        single_dot_on(r, c);
-        write_registers();
-        // delay(250);      
-        single_dot_off(r, c);
-        write_registers();
-      }
-      else{
-        // delay(250);
-      }
-    }
-    // Serial.print("\n");
-  }
+  draw_shape(DIAG);
+  // TODO: SCROLL SHAPE
 }             
 
 // set and display registers
@@ -110,12 +96,26 @@ void set_col_register(int c, int value){
 void single_dot_on(int r, int c){
   set_row_register(r, ON_ROW);
   set_col_register(c, ON_COL);
+  write_registers();
 }
 
 // set register to light off single dot at (c, r) co-ordinate
 void single_dot_off(int r, int c){
   set_row_register(r, OFF_ROW);
   set_col_register(c, OFF_COL);
+  write_registers();
+}
+
+// draw 8x8 shape array
+void draw_shape(int shape[][8]){
+  for (int r = 1; r <= 8; r++) {
+    for (int c = 1; c <= 8; c++) {
+      if (shape[r-1][c-1] == 1){
+        single_dot_on(r, c);
+        single_dot_off(r, c);
+      }
+    }
+  }
 }
 
 // turn all LEDs off
@@ -140,28 +140,24 @@ void turn_all_on(){
   write_registers();
 }
 
-// push and update, one at a time
-void push_register(int value){
-  digitalWrite(RCLK_PIN, LOW);
-  digitalWrite(SRCLK_PIN, LOW);
-  
-  digitalWrite(SER_PIN, value);
-  
-  digitalWrite(SRCLK_PIN, HIGH);
-  digitalWrite(RCLK_PIN, HIGH);
-}
-
 // light up entire nth row
 void whole_row(int n){
-
+  for (int c = 1; c <= 8; c++){
+    single_dot_on(n, c);
+  }
+  write_registers();
 }
 
 // light up entire nth col
 void whole_col(int n){
-
+  for (int r = 1; r <= 8; r++){
+    single_dot_on(r, n);
+  }
+  write_registers();
 }
 
-void debug(){
+// light up every led individually
+void debug_individual(){
   for (int r = 1; r <= 8; r++) {
     for (int c = 1; c <= 8; c++) {
       // for rth row and cth column
@@ -173,4 +169,15 @@ void debug(){
       delay(100);
     }
   }
+}
+
+// push and update shift register, one at a time
+void debug_push_register(int value){
+  digitalWrite(RCLK_PIN, LOW);
+  digitalWrite(SRCLK_PIN, LOW);
+  
+  digitalWrite(SER_PIN, value);
+  
+  digitalWrite(SRCLK_PIN, HIGH);
+  digitalWrite(RCLK_PIN, HIGH);
 }
