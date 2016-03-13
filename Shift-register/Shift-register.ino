@@ -14,7 +14,7 @@ const int RCLK_PIN = 9;   // pin 12 on the 75HC595
 const int SRCLK_PIN = 10; // pin 11 on the 75HC595
 
 // led matrix info
-int col[] = {1, 2, 3, 4, 5, 6, 7, 8};
+int col[] = {8, 7, 6, 5, 4, 3, 2, 1};
 int row[] = {9, 10, 11, 12, 13, 14, 15, 16};
 bool LED_MATRIX_CONFIG = 0; // 0 if rows are cathodes and columns are anodes
                             // 1 if rows are anodes and columns are cathodes
@@ -55,9 +55,43 @@ int DIAG[][8] = {
   {1,0,0,0,0,0,0,0}
 };
 
+int DIAG_SQUARE[][8] = {
+  {0,0,0,1,1,0,0,0},
+  {0,0,1,1,1,1,0,0},
+  {0,1,1,1,1,1,1,0},
+  {1,1,1,1,1,1,1,1},
+  {1,1,1,1,1,1,1,1},
+  {0,1,1,1,1,1,1,0},
+  {0,0,1,1,1,1,0,0},
+  {0,0,0,1,1,0,0,0}
+};
+
+int LEFT[][8] = {
+  {0,0,0,1,0,0,0,0},
+  {0,0,1,1,0,0,0,0},
+  {0,1,1,1,1,1,1,1},
+  {1,1,1,1,1,1,1,1},
+  {1,1,1,1,1,1,1,1},
+  {0,1,1,1,1,1,1,1},
+  {0,0,1,1,0,0,0,0},
+  {0,0,0,1,0,0,0,0}
+};
+
+int BLANK[][8] = {
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0},
+  {0,0,0,0,0,0,0,0}
+};
+
 void loop(){
-  draw_shape(DIAG);
-  // TODO: SCROLL SHAPE
+  scroll_shape(LEFT);
+  // TODO: make draw_shape switch on all in a row at same time
+  // TODO: start with moving dot and accelerometer
 }             
 
 // set and display registers
@@ -114,6 +148,37 @@ void draw_shape(int shape[][8]){
         single_dot_on(r, c);
         single_dot_off(r, c);
       }
+    }
+  }
+}
+
+// scroll shape from right to left
+void scroll_shape(int shape[][8]){
+  int placeholder [][8] = {
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0},
+    {0,0,0,0,0,0,0,0}
+  };
+  // outside loop for scroll
+  for (int i = 0; i < 16; i++){
+    unsigned long start_time = millis();
+    for (int c = 0; c < 8; c++){
+      for (int r = 0; r < 8; r++){
+        if (i - c < 0 || i - c >= 8){
+          placeholder[r][7 - c] = 0;
+        }
+        else {
+          placeholder[r][7 - c] = shape[r][i - c];
+        }
+      }
+    }
+    while (millis() - start_time < 100){
+      draw_shape(placeholder);
     }
   }
 }
