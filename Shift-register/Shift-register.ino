@@ -14,8 +14,8 @@ const int RCLK_PIN = 9;   // pin 12 on the 75HC595
 const int SRCLK_PIN = 10; // pin 11 on the 75HC595
 
 // led matrix info
-int col[] = {8, 7, 6, 5, 4, 3, 2, 1};
-int row[] = {9, 10, 11, 12, 13, 14, 15, 16};
+const int col[] = {8, 7, 6, 5, 4, 3, 2, 1};
+const int row[] = {9, 10, 11, 12, 13, 14, 15, 16};
 bool LED_MATRIX_CONFIG = 0; // 0 if rows are cathodes and columns are anodes
                             // 1 if rows are anodes and columns are cathodes
 int ON_ROW, ON_COL, OFF_ROW, OFF_COL; // ON-OFF states depending on config, see set_states()
@@ -31,6 +31,21 @@ void set_states(){
   }
 }
 
+// Analog read pins
+const int X_PIN = 0;
+const int Y_PIN = 1;
+const int Z_PIN = 2;
+
+// to hold the caculated values
+double x_val;
+double y_val;
+double z_val;
+
+// Accerlerometer constants
+const int TOL = 5; // tolerance for sensitivity neglection
+const int FLAT = 335; // x and y readings when level
+const int MAX = 70; // max diff in acc reading for any given axis for 90 degree rotation
+
 void setup(){
   set_states();
   
@@ -41,10 +56,10 @@ void setup(){
   // reset all register pins
   turn_all_off();
   
-  // Serial.begin(9600);
+  Serial.begin(9600);
 }
 
-int DIAG[][8] = {
+const int DIAG[][8] = {
   {0,0,0,0,0,0,0,1},
   {0,0,0,0,0,0,1,0},
   {0,0,0,0,0,1,0,0},
@@ -55,7 +70,7 @@ int DIAG[][8] = {
   {1,0,0,0,0,0,0,0}
 };
 
-int DIAG_SQUARE[][8] = {
+const int DIAG_SQUARE[][8] = {
   {0,0,0,1,1,0,0,0},
   {0,0,1,1,1,1,0,0},
   {0,1,1,1,1,1,1,0},
@@ -66,7 +81,7 @@ int DIAG_SQUARE[][8] = {
   {0,0,0,1,1,0,0,0}
 };
 
-int LEFT[][8] = {
+const int LEFT[][8] = {
   {0,0,0,1,0,0,0,0},
   {0,0,1,1,0,0,0,0},
   {0,1,1,1,1,1,1,1},
@@ -77,7 +92,7 @@ int LEFT[][8] = {
   {0,0,0,1,0,0,0,0}
 };
 
-int BLANK[][8] = {
+const int BLANK[][8] = {
   {0,0,0,0,0,0,0,0},
   {0,0,0,0,0,0,0,0},
   {0,0,0,0,0,0,0,0},
@@ -88,11 +103,52 @@ int BLANK[][8] = {
   {0,0,0,0,0,0,0,0}
 };
 
+// tilt indicator (line, 1 axis)
+// int LIN[][8] = {
+//   {1,1,1,1,1,1,1,1},
+//   {1,1,1,1,1,1,1,1}
+// };
+
+// int IND_LIN_R = 4; 
+int dot_r = 4;
+int dot_c = 4;
+
 void loop(){
-  scroll_shape(LEFT);
-  // TODO: make draw_shape switch on all in a row at same time
-  // TODO: start with moving dot and accelerometer
-}             
+  // unsigned int init_time = millis();
+  x_val = analogRead(X_PIN);
+  y_val = analogRead(Y_PIN);
+  map_dot(x_val, y_val);
+  if (dot_r <=7 && dot_r >=1 &&
+      dot_c <=7 && dot_c >=1){
+    unsigned int init_time = millis();
+    while (millis() - init_time < 50){
+      draw_dot(dot_r, dot_c);
+    }
+  }
+  // Serial.print(millis() - init_time);
+  // z_val = analogRead(Z_PIN);
+  // debug_print_acc();
+  // Serial.print(dot_r);
+  // Serial.print(", ");
+  // Serial.print(dot_c);
+  // Serial.print("\n");
+}
+
+// map x, y acc readinds to DOT position in (r, c)
+void map_dot(double x_val, double y_val){
+  int delta_r = 0;
+  int delta_c = 0;
+  if (abs(y_val - FLAT) > TOL){
+    // rotation about x
+    delta_c = (int) (((FLAT - y_val) / MAX) * 4);
+  }
+  if (abs(x_val - FLAT) > TOL){
+    // rotation about y
+    delta_r = (int) (((FLAT - x_val) / MAX) * 4);
+  }
+  dot_r = 4 + delta_r;
+  dot_c = 4 + delta_c;
+}
 
 // set and display registers
 // only call AFTER all values are set how you would like (slow otherwise)
@@ -158,6 +214,27 @@ void draw_shape(int shape[][8]){
   }
 }
 
+// draw LIN with top half in row r
+void draw_lin(int r){
+  whole_row_on(r);
+  whole_row_on(r+1);
+  whole_row_off(r);
+  whole_row_off(r+1);
+}
+
+// draw DOT with top left corner at (r, c)
+void draw_dot(int r, int c){
+  single_dot_on(r, c);
+  single_dot_on(r, c+1);
+  single_dot_off(r, c);
+  single_dot_off(r, c+1);
+
+  single_dot_on(r+1, c);
+  single_dot_on(r+1, c+1);
+  single_dot_off(r+1, c);
+  single_dot_off(r+1, c+1);
+}
+
 // scroll shape from right to left
 void scroll_shape(int shape[][8]){
   int placeholder [][8] = {
@@ -212,17 +289,37 @@ void turn_all_on(){
 }
 
 // light up entire nth row
-void whole_row(int n){
+void whole_row_on(int n){
+  set_row_register(n, ON_ROW);
   for (int c = 1; c <= 8; c++){
-    single_dot_on(n, c);
+    set_col_register(c, ON_COL);
+  }
+  write_registers();
+}
+
+// turn off entire nth row
+void whole_row_off(int n){
+  set_row_register(n, OFF_ROW);
+  for (int c = 1; c <= 8; c++){
+    set_col_register(c, OFF_COL);
   }
   write_registers();
 }
 
 // light up entire nth col
-void whole_col(int n){
+void whole_col_on(int n){
+  set_col_register(n, ON_COL);
   for (int r = 1; r <= 8; r++){
-    single_dot_on(r, n);
+    set_row_register(r, ON_ROW);
+  }
+  write_registers();
+}
+
+// turn off entire nth col
+void whole_col_off(int n){
+  set_col_register(n, OFF_COL);
+  for (int r = 1; r <= 8; r++){
+    set_row_register(r, OFF_ROW);
   }
   write_registers();
 }
@@ -251,4 +348,13 @@ void debug_push_register(int value){
   
   digitalWrite(SRCLK_PIN, HIGH);
   digitalWrite(RCLK_PIN, HIGH);
+}
+
+void debug_print_acc(){
+  Serial.print("x: ");
+  Serial.print(x_val);
+  Serial.print(" | y: ");
+  Serial.print(y_val);
+  Serial.print(" | z: ");
+  Serial.println(z_val);
 }
