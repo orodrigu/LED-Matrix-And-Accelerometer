@@ -143,12 +143,18 @@ void single_dot_off(int r, int c){
 // draw 8x8 shape array
 void draw_shape(int shape[][8]){
   for (int r = 1; r <= 8; r++) {
+    set_row_register(r, ON_ROW);
     for (int c = 1; c <= 8; c++) {
       if (shape[r-1][c-1] == 1){
-        single_dot_on(r, c);
-        single_dot_off(r, c);
+        set_col_register(c, ON_COL);
       }
     }
+    write_registers();
+    set_row_register(r, OFF_ROW);
+    for (int c = 1; c <= 8; c++) {
+      set_col_register(c, OFF_COL);
+    }
+    write_registers();
   }
 }
 
